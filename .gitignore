@@ -1,0 +1,9 @@
+# compiled programs
+library
+library.exe
+*.exe
+*.o
+# data created while running
+books.txt
+members.txt
+issues.txt

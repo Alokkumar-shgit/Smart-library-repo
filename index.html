@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Library Management System</title>
+<style>
+  :root{--ink:#12284c;--blue:#2457c5;--line:#d5deee;--bg:#f3f6fc;--card:#fff;--ok:#1b7f4b;--bad:#b3261e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+  header{background:var(--ink);color:#fff;padding:18px 24px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  a.btn{text-decoration:none;display:inline-block}
+  .btn.dl{background:#fff;color:var(--ink);font-weight:600}
+  header h1{margin:0;font:600 26px Georgia,serif}
+  header p{margin:2px 0 0;opacity:.75;font-size:14px}
+  nav{display:flex;gap:4px;flex-wrap:wrap;background:#fff;border-bottom:1px solid var(--line);padding:0 16px}
+  nav button{border:0;background:none;padding:14px 16px;font:inherit;color:var(--ink);cursor:pointer;border-bottom:3px solid transparent}
+  nav button.on{border-color:var(--blue);font-weight:600}
+  main{max-width:1000px;margin:0 auto;padding:20px 16px}
+  section{display:none} section.on{display:block}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+  .card b{display:block;font:600 34px Georgia,serif;color:var(--blue)}
+  .card.warn b{color:var(--bad)}
+  form,.box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  label{display:flex;flex-direction:column;font-size:13px;gap:3px;flex:1 1 140px}
+  input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit}
+  input:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+  .btn{background:var(--blue);color:#fff;border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer}
+  .btn.alt{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+  .btn.red{background:var(--bad)}
+  .btn.sm{padding:4px 10px;font-size:13px}
+  .wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
+  table{width:100%;border-collapse:collapse;min-width:640px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px}
+  th{background:#eaf0fb}
+  td.late{color:var(--bad);font-weight:600}
+  .empty{padding:18px;text-align:center;color:#5a6a88}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:6px;color:#fff;display:none;max-width:90%}
+  h2{font:600 20px Georgia,serif;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<header><div><h1>Smart Library Management System</h1><p>Books, members, issuing and returning</p></div>
+  <a class="btn dl" href="/api/export" download>Download data (Excel)</a></header>
+<nav id="nav"></nav>
+<main>
+<section id="dash"><h2>Dashboard</h2><div class="wrap" id="cards"></div></section>
+
+<section id="books"><h2>Books</h2>
+  <div class="box"><label>Search by ID, title or author
+    <input id="bq" list="sug" oninput="loadBooks();suggest()" placeholder="Start typing..."></label>
+    <datalist id="sug"></datalist></div>
+  <form onsubmit="return false">
+    <label>Book ID<input id="bid" inputmode="numeric"></label>
+    <label>Title<input id="btitle"></label>
+    <label>Author<input id="bauthor"></label>
+    <label>Category<input id="bcat"></label>
+    <label>Publisher<input id="bpub"></label>
+    <label>Year published<input id="byear" inputmode="numeric" placeholder="e.g. 2015"></label>
+    <label>Total copies<input id="btotal" inputmode="numeric"></label>
+    <button class="btn" onclick="saveBook('add')">Add book</button>
+    <button class="btn alt" onclick="saveBook('update')">Update book</button>
+  </form>
+  <div class="wrap" id="btable"></div></section>
+
+<section id="members"><h2>Members</h2>
+  <div class="box"><label>Search by ID, name or department
+    <input id="mq" oninput="loadMembers()" placeholder="Start typing..."></label></div>
+  <form onsubmit="return false">
+    <label>Member ID<input id="mid" inputmode="numeric"></label>
+    <label>Name<input id="mname"></label>
+    <label>Department<input id="mdept"></label>
+    <label>Year of study<input id="myr" placeholder="e.g. 1st Year"></label>
+    <label>Phone (10 digits)<input id="mphone" inputmode="numeric"></label>
+    <label>Email<input id="memail" type="email"></label>
+    <button class="btn" onclick="saveMember('add')">Add member</button>
+    <button class="btn alt" onclick="saveMember('update')">Update member</button>
+  </form>
+  <div class="wrap" id="mtable"></div></section>
+
+<section id="issue"><h2>Issue and return</h2>
+  <form onsubmit="return false">
+    <label>Member ID<input id="im" inputmode="numeric"></label>
+    <label>Book ID<input id="ib" inputmode="numeric"></label>
+    <label>Demo only: issued how many days ago?<input id="id" inputmode="numeric" placeholder="e.g. 40 to see it overdue"></label>
+    <button class="btn" onclick="issue()">Issue book</button>
+    <button class="btn alt" onclick="ret()">Return book</button>
+  </form>
+  <div class="wrap" id="itable"></div></section>
+
+<section id="over"><h2>Overdue books (not returned within 1 month)</h2><div class="wrap" id="otable"></div></section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let B = [], M = [];
+
+/* talk to the C server */
+const get = async (p, o = {}) => (await fetch('/api/' + p + '?' + new URLSearchParams(o))).json();
+async function post(p, o) {                       // used for every change (add/update/delete...)
+  const r = await (await fetch('/api/' + p + '?' + new URLSearchParams(o), {method: 'POST'})).json();
+  const t = $('toast'); t.textContent = r.msg; t.style.background = r.ok ? 'var(--ok)' : 'var(--bad)';
+  t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3500);
+  if (r.ok) refresh(); return r;
+}
+function table(cols, rows, tail) {                // build an HTML table from data
+  if (!rows.length) return '<div class="empty">Nothing here yet.</div>';
+  return '<table><tr>' + cols.map(c => '<th>' + c[0] + '</th>').join('') + (tail ? '<th>Action</th>' : '') + '</tr>' +
+    rows.map((r, i) => '<tr>' + cols.map(c => '<td' + (c[2] && r[c[1]] > 0 ? ' class="late"' : '') + '>' + esc(r[c[1]]) + '</td>').join('') +
+    (tail ? '<td>' + tail(r, i) + '</td>' : '') + '</tr>').join('') + '</table>';
+}
+
+/* tabs */
+const tabs = [['dash','Dashboard'],['books','Books'],['members','Members'],['issue','Issue / Return'],['over','Overdue']];
+$('nav').innerHTML = tabs.map(t => `<button data-t="${t[0]}" onclick="show('${t[0]}')">${t[1]}</button>`).join('');
+function show(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === id));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === id));
+  refresh();
+}
+
+/* load data */
+async function loadDash() {
+  const d = await get('dashboard');
+  $('cards').innerHTML = '<table><tr><th>Summary</th><th>Count</th></tr>' +
+    [['Total books (titles)', d.books], ['Total members', d.members], ['Books currently issued', d.issued],
+     ['Overdue books (kept more than 1 month)', d.overdue, 1], ['Total fine pending (Rs)', d.fine, 1]]
+    .map(c => `<tr><td>${c[0]}</td><td${c[2] && c[1] > 0 ? ' class="late"' : ''}>${c[1]}</td></tr>`).join('') + '</table>';
+}
+async function loadBooks() {
+  B = await get('books', {q: $('bq').value});
+  $('btable').innerHTML = table([['ID','id'],['Title','title'],['Author','author'],['Category','cat'],['Publisher','pub'],['Year','year'],['Total','total'],['Available','avail']], B,
+    (r, i) => `<button class="btn sm alt" onclick="editBook(${i})">Edit</button> <button class="btn sm red" onclick="delBook(${r.id})">Delete</button>`);
+}
+async function suggest() {                        // live search suggestions
+  const s = await get('suggest', {q: $('bq').value});
+  $('sug').innerHTML = s.map(x => `<option value="${esc(x)}">`).join('');
+}
+async function loadMembers() {
+  M = await get('members', {q: $('mq').value});
+  $('mtable').innerHTML = table([['ID','id'],['Name','name'],['Department','dept'],['Year','yr'],['Phone','phone'],['Email','email'],['Books held','holding']], M,
+    (r, i) => `<button class="btn sm alt" onclick="editMember(${i})">Edit</button> <button class="btn sm red" onclick="delMember(${r.id})">Delete</button>`);
+}
+async function loadIssues() {
+  const r = await get('issues');
+  $('itable').innerHTML = table([['Member','member'],['Book','book'],['Issued','issued'],['Due','due'],['Days late','days',1],['Fine (Rs)','fine',1]], r,
+    x => `<button class="btn sm alt" onclick="fillIssue(${x.mid},${x.bid})">Select</button>`);
+}
+async function loadOver() {
+  const r = await get('issues', {overdue: 1});
+  $('otable').innerHTML = table([['Member ID','mid'],['Member','member'],['Book','book'],['Due','due'],['Days late','days',1],['Fine (Rs)','fine',1]], r);
+}
+function refresh() { loadDash(); loadBooks(); loadMembers(); loadIssues(); loadOver(); }
+
+/* actions */
+const val = ids => Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, $(v).value]));
+const clear = ids => ids.forEach(i => $(i).value = '');
+async function saveBook(act) {
+  const r = await post('book/' + act, val({id:'bid', title:'btitle', author:'bauthor', cat:'bcat', pub:'bpub', year:'byear', total:'btotal'}));
+  if (r.ok) clear(['bid','btitle','bauthor','bcat','bpub','byear','btotal']);
+}
+function editBook(i) { const b = B[i]; $('bid').value = b.id; $('btitle').value = b.title; $('bauthor').value = b.author; $('bcat').value = b.cat; $('bpub').value = b.pub; $('byear').value = b.year; $('btotal').value = b.total; scrollTo(0, 0); }
+function delBook(id) { if (confirm('Delete book ' + id + '?')) post('book/delete', {id}); }
+async function saveMember(act) {
+  const r = await post('member/' + act, val({id:'mid', name:'mname', dept:'mdept', yr:'myr', phone:'mphone', email:'memail'}));
+  if (r.ok) clear(['mid','mname','mdept','myr','mphone','memail']);
+}
+function editMember(i) { const m = M[i]; $('mid').value = m.id; $('mname').value = m.name; $('mdept').value = m.dept; $('myr').value = m.yr; $('mphone').value = m.phone; $('memail').value = m.email; scrollTo(0, 0); }
+function delMember(id) { if (confirm('Delete member ' + id + '?')) post('member/delete', {id}); }
+const fillIssue = (m, b) => { $('im').value = m; $('ib').value = b; };
+async function issue() { const r = await post('issue', {member: $('im').value, book: $('ib').value, demo: $('id').value}); if (r.ok) clear(['im','ib','id']); }
+async function ret() { const r = await post('return', {member: $('im').value, book: $('ib').value}); if (r.ok) clear(['im','ib','id']); }
+
+show('dash');
+</script>
+</body>
+</html>
